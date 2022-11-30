@@ -117,15 +117,6 @@ abstract contract ERC20Interface {
     event Approval(address indexed tokenOwner, address indexed spender, uint256 tokens);
 }
 
-abstract contract ApproveAndCallFallBack {
-    function receiveApproval(
-        address from,
-        uint256 tokens,
-        address token,
-        bytes memory data
-    ) public virtual;
-}
-
 contract Owned {
     address public owner;
     address public newOwner;
@@ -142,6 +133,7 @@ contract Owned {
     }
 
     function transferOwnership(address _newOwner) public onlyOwner {
+        require(_newOwner != address(0), "invalid address");
         newOwner = _newOwner;
     }
 
@@ -383,22 +375,6 @@ contract StandardToken is ERC20Interface, Owned, Pausable {
         return allowed[tokenOwner][spender];
     }
 
-    function approveAndCall(
-        address spender,
-        uint256 tokens,
-        bytes memory data
-    ) public whenNotPaused returns (bool success) {
-        allowed[msg.sender][spender] = tokens;
-        emit Approval(msg.sender, spender, tokens);
-        ApproveAndCallFallBack(spender).receiveApproval(
-            msg.sender,
-            tokens,
-            address(this),
-            data
-        );
-        return true;
-    }
-
     function redistribute(uint256 amount) public hasAccessPermission {
         uint256 shares = getShare(amount);
         balances[msg.sender] = balances[msg.sender].sub(shares);
@@ -564,12 +540,14 @@ contract StandardToken is ERC20Interface, Owned, Pausable {
     }
 
     function updateNftRewardAddress(address _address) public onlyOwner returns (bool) {
+        require(_address != address(0), "invalid address");
         nft_reward = _address;
         emit UpdateNftRewardAddress(_address);
         return true;
     }
 
     function updateReserveAddress(address _lp_reserve, address _vp_reserve) public onlyOwner returns (bool) {
+        require(_lp_reserve != address(0) && _vp_reserve != address(0), "invalid address");
         lp_reserve = _lp_reserve;
         vp_reserve = _vp_reserve;
         emit UpdateReserveAddress(_lp_reserve, _vp_reserve);
@@ -577,6 +555,7 @@ contract StandardToken is ERC20Interface, Owned, Pausable {
     }
 
     function updateLiquidifySetting(address _liquidify, address _lp_address) public onlyOwner returns (bool) {
+        require(_liquidify != address(0) && _lp_address != address(0), "invalid address");
         liquidify  = _liquidify;
         lp_address = _lp_address;
         emit UpdateLiquidifySetting(liquidify, lp_address);
