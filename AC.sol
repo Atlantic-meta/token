@@ -197,20 +197,20 @@ contract StandardToken is ERC20Interface, Owned, Pausable {
     bool    public enabled_liquidify;
     bool    public is_process_tax;
     bool    public is_mintable;
+    bool    public enabled_tax;
 
     mapping(address => uint256) balances;
     mapping(address => mapping(address => uint256)) allowed;
-    mapping(address => bool) public tax_list;
     mapping(address => bool) public tax_whitelist;
     mapping(address => bool) public antiWhale_list;
     mapping(address => bool) public minter_list;
     mapping(address => bool) public access_permission;
 
+    event UpdateEnabledTax(bool status);
     event UpdateMintable(bool status);
     event UpdateDevAddress(address _address);
     event UpdateNftRewardAddress(address _address);
     event UpdateReserveAddress(address lp_reserve, address vp_reserve);
-    event UpdateTaxAddress(address target_address, bool status);
     event UpdateLiquidifySetting(address liquidify, address lp_address);
     event UpdateTaxWhitelist(address target_address, bool status);
     event UpdateRateReceiver(uint256 rate);
@@ -263,7 +263,7 @@ contract StandardToken is ERC20Interface, Owned, Pausable {
         total_supply = 20000000 * 10**uint256(decimals);
         tsupply      = total_supply * 10**12;
         rsupply      = total_supply * 10**12;
-      
+
         rate_max_transfer = 1 ether; // full max transfer
 
         // tax rates
@@ -277,7 +277,7 @@ contract StandardToken is ERC20Interface, Owned, Pausable {
         access_permission[msg.sender] = true;
 
         // zap helper
-        liquidify  = 0x03FB6dEA88a9c7850069916D5520Bb1CD2ee8F80;
+        liquidify  = 0x91919fAb55a1B7d0a6a4A86f674Ca75dcc971766;
 
         // reserve for reward all NFT holders on tax
         nft_reward = 0xDEFf46449ab00d671B74Bc920F682D9b87905E64;
@@ -433,12 +433,12 @@ contract StandardToken is ERC20Interface, Owned, Pausable {
         uint256 tokens
     ) internal {
         /*
-         * fullfill all requirment below to apply fee
-         * 1. "from" or "to" address is in blacklist
+         * fullfill all requirement below to apply fee
+         * 1. apply tax is enabled
          * 2. "from" or "to" address is not in whitelist
          */
         if (
-            (tax_list[from] || tax_list[to]) &&
+            (enabled_tax) &&
             !(tax_whitelist[from] || tax_whitelist[to])
         ) {
             (uint256 fee_redistribute, uint256 fee_lp, uint256 fee_nftreward) = (0, 0, 0);
@@ -546,6 +546,12 @@ contract StandardToken is ERC20Interface, Owned, Pausable {
         return true;
     }
 
+    function updateEnabledTax(bool status) public onlyOwner returns (bool) {
+        enabled_tax = status;
+        emit UpdateEnabledTax(status);
+        return true;
+    }
+
     function updateReserveAddress(address _lp_reserve, address _vp_reserve) public onlyOwner returns (bool) {
         require(_lp_reserve != address(0) && _vp_reserve != address(0), "invalid address");
         lp_reserve = _lp_reserve;
@@ -559,12 +565,6 @@ contract StandardToken is ERC20Interface, Owned, Pausable {
         liquidify  = _liquidify;
         lp_address = _lp_address;
         emit UpdateLiquidifySetting(liquidify, lp_address);
-        return true;
-    }
-
-    function updateTaxAddress(address _address, bool status) public onlyOwner returns (bool) {
-        tax_list[_address] = status;
-        emit UpdateTaxAddress(_address, status);
         return true;
     }
 
